@@ -67,10 +67,10 @@ static void fillContainer(Bot bot, Field field) //Вывод в консоль �
 		sleep_for(1s);
 }
 
-static void PlayerShoots(CellStatus playerColor, Field field) 
+static void PlayerShoots(CellStatus playerColor, CellStatus enemyColor, Field field) 
 {
 	//Сделать проверку доступных вариантов хода
-	field.checkMoves(playerColor);
+	field.checkMoves(playerColor, enemyColor);
 
 	//Обновить форму
 
@@ -105,13 +105,13 @@ static void GameStart(const Bot& bot, Field field) {
 				//Ходит бот
 
 				//Ходит игрок
-				PlayerShoots(Black, field);
+				PlayerShoots(Black, White, field);
 				break;
 			}
 			case(2): //Бот чёрный - первый ход за игроком
 			{
 				//Ходит игрок
-				PlayerShoots(White, field);
+				PlayerShoots(White, Black, field);
 				//Ходит бот
 
 				break;
