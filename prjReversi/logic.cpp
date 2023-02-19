@@ -1,122 +1,446 @@
 ﻿#include "Field.h"
 
-inline void SetAttrib(int intAttrib) 
-{ 
-	HANDLE  hConsole = GetStdHandle(STD_OUTPUT_HANDLE); 
-	SetConsoleTextAttribute(hConsole, intAttrib); 
-}
-
-inline void colorSymbol(CellStatus cs) {
-	
-	switch (cs) {
-		case(0): {
-			SetAttrib(32); //Зелёный
-			cout << "  ";  //cout << "██"
-			break;
-		}
-		case(1): {
-			SetAttrib(255); //Белый
-			cout << "  ";
-			break;
-		}
-		case(2): {
-			SetAttrib(0);  //Черный
-			cout << "  ";
-			break;
-		}
-		case(3): {
-			SetAttrib(44);  //С красной меткой 
-			cout << "<>";
-			break;
-		}
-		default: {
-			SetAttrib(15);
-			cout << "00";
-			break;
-		}
-	}
-}
-
-static void fillContainer(Bot bot, Field field) //Вывод в консоль поля 
-{
-	vector <Cell> inCells = field.getField();
-	cout << "     1 2 3 4 5 6 7 8\n\n";
-	for (int i = 1; i < 9; i++)
-	{
-		cout << " " << i << "   ";
-		for (int j = 1; j < 9; j++)
-		{
-			auto foundCell = find_if(inCells.begin(), inCells.end(), [j, i](Cell cell)
-				{
-					return (cell.getX()==j && cell.getY()==i);
-				});
-			colorSymbol((*foundCell).getStatus());
-		}
-		SetAttrib(15);
-		cout << endl;
-	}
-		SetAttrib(191);
-		cout << endl;
-		cout << string(88, ' ') << "\n";
-		SetAttrib(191);
-		cout << "  "; SetAttrib(32);	cout << "  ";  SetAttrib(191); cout << " —  Клетки поля, ";
-		cout << "  "; SetAttrib(255);	cout << "  ";  SetAttrib(191); cout << " —  Белые  фишки, ";
-		cout << "  "; SetAttrib(0);		cout << "  ";  SetAttrib(191); cout << " —  Чёрные фишки, ";
-		cout << "  "; SetAttrib(44);	cout << "<>";  SetAttrib(191); cout << " —  Возможные ходы \n";
-		cout << string(88, ' ') << "\n"; SetAttrib(15);
-		sleep_for(1s);
-}
-
-static void PlayerShoots(CellStatus playerColor, CellStatus enemyColor, Field field) 
-{
-	//Сделать проверку доступных вариантов хода
-	field.checkMoves(playerColor, enemyColor);
-
-	//Обновить форму
-
-	//Принять координату и проверить на корректность
-
-	//Заменить необходимые фишки
-}
-
-static void GameStart(const Bot& bot, Field field) {
+static void Game(const Bot& bot, Field mainField) {
 	cout << "\n==============================================================\n";
-	cout << "Сложность - ";
+	cout << "Выбранная сложность - ";
 	if (typeid(bot).name() == typeid(EasyBot).name()) cout << "Лёгкий\n";
 	if (typeid(bot).name() == typeid(HardBot).name()) cout << "Сложный\n";
 	if (typeid(bot).name() == typeid(Bot).name()) cout << "Ошибка\n";
 	
-	cout << "Бот - "; cout << bot.getColor();
+	cout << "Цвет фишек компьютера - "; cout << bot.getColor();				cout << '\a';
+
 	sleep_for(1s);
 
 	cout << "\n\nИгра начинается...";
 	sleep_for(2s);
-	system("cls");
-
-	fillContainer(bot, field);
+	system("cls");	
 	cout << endl;
-
-	while (field.Exists()) 
+	switch (bot.getStatus())
 	{
-		switch(bot.getStatus())
+		case(1): //Бот белый - первый ход заним
 		{
-			case(1): //Бот белый - первый ход заним
+			CellStatus playerColor = Black, enemyColor = CellStatus(bot.getStatus());
+			while (mainField.Exists())
 			{
 				//Ходит бот
+				{
+					system("cls");
+					SetAttrib(191);
+					cout << "     ХОДИТ КОМПЬЮТЕР     \n";
+					SetAttrib(15);
+					mainField.fillContainer();
 
+					sleep_for(0.1s);
+
+					vector <Cell> possCells = mainField.checkMoves(enemyColor, playerColor);
+					Cell moveCell = bot.getBotMove(possCells);
+
+					int putX = moveCell.getX(), putY = moveCell.getY();
+
+					auto botFoundCell = find_if(mainField.cells.begin(), mainField.cells.end(), [putX, putY](Cell& cell) //Фишки, которые мы ищем
+						{
+							return (cell.getX() == putX && cell.getY() == putY);
+						});
+
+					mainField.clearPossibles();
+					(*botFoundCell).ChangeStatus(Changing);
+					system("cls");
+					cout << "     ХОДИТ КОМПЬЮТЕР     \n";
+					mainField.fillContainer();
+					sleep_for(0.1s);
+					(*botFoundCell).ChangeStatus(enemyColor);
+					system("cls");
+					cout << "     ХОДИТ КОМПЬЮТЕР     \n";
+					mainField.fillContainer();
+					sleep_for(0.1s);
+
+					//Замена промежуточных клеток
+					{
+						vector <Cell> cellsToFill;
+
+						int cX = putX; int cY = putY; //Координаты проверяемой клетки
+
+						//Модификаторы для проверки по всем направлениям (будут проверяться клетки вокруг выбранной)
+						for (int modY = -1; modY < 2; modY++)
+						{
+							for (int modX = -1; modX < 2; modX++)
+							{
+								bool xFitsBorders = (cX + modX > 0) && (cX + modX <= 8);	//Изменённые координаты не выйдут за границы массива
+								bool yFitsBorders = (cY + modY > 0) && (cY + modY <= 8);
+								bool notCentralCell = !(modX == 0 && modY == 0);			//Не является центральной клеткой (её проверять не надо)
+
+								if (xFitsBorders && yFitsBorders && notCentralCell && mainField.getCellByXY(cX + modX, cY + modY).getStatus() == playerColor)
+									//Если рядом с пустой клеткой есть фишка противника
+								{
+									//Идти в том направлении пока не будет найдена своя фишка или фишки противника не закончатся
+									bool multiplyGO = true; int mult = 1;
+									do
+									{
+										int multX = cX + modX * mult; int multY = cY + modY * mult;
+										bool xmFitsBorders = (multX > 0) && (multX <= 8);	//Изменённые С УМНОЖЕНИЕМ координаты не выйдут за границы массива
+										bool ymFitsBorders = (multY > 0) && (multY <= 8);
+
+										//Если условие выполнится, программа начнёт проверку другого направления  от клетки
+										if (xmFitsBorders && ymFitsBorders)
+										{
+											//Найдена ячейка на которую можно поставить фишку
+											if (mainField.getCellByXY(multX, multY).getStatus() == enemyColor)
+											{
+												mainField.fillColorForArray(cellsToFill, enemyColor);
+												cellsToFill.clear();
+												break;
+											}
+										}
+										else { cellsToFill.clear();  break; }
+										mult++;
+										cellsToFill.push_back(mainField.getCellByXY(multX, multY));
+									} while (multiplyGO);
+
+
+								}
+							}
+						}
+					}
+
+				}
 				//Ходит игрок
-				PlayerShoots(Black, White, field);
-				break;
+				{
+					//Сделать проверку доступных вариантов хода
+					vector <Cell> possCells = mainField.checkMoves(playerColor, enemyColor);
+
+					//Обновить форму
+					system("cls");
+					SetAttrib(191);
+					cout << "       ХОДИТ ИГРОК       \n";
+					SetAttrib(15);
+					mainField.fillContainer();
+
+					cout << "Введите координаты ячейки, на которую хотите поставить фишку в формате XY (где X и Y — целые числа от 1 до 8)";
+
+					//Принять координату и проверить на корректность
+					int inCoords; bool inputCorrect = false;
+					int putX, putY;
+					do
+					{
+
+						cout << "\nВаш ввод: ";
+						cin >> inCoords;			cin.clear();
+						if (!cin.fail() && inCoords > 10 && inCoords <= 88 && ((inCoords % 10 <= 8 && inCoords % 10 > 0) && (inCoords / 10 > 0 && inCoords / 10 <= 8)))
+						{
+							//Получили координаты. Проверим, есть ли они среди возможных ходов
+							putX = inCoords / 10;
+							putY = inCoords % 10;
+
+							auto foundCell = find_if(possCells.begin(), possCells.end(), [putX, putY](Cell cell)
+								{
+									return (cell.getX() == putX && cell.getY() == putY);
+								});
+
+							if (foundCell != possCells.end())
+							{
+								inputCorrect = true;
+								cout << "\nПринято. Вы ставите фишку на ячейку с координатами X=" << putX << ", Y=" << putY;
+							}
+							else
+							{
+								cout << "\nВведённой координаты нет среди доступных ходов. Пожалуйста, повторите ввод...";
+							}
+						}
+						else {
+							cout << "\nВаш ввод был некорректен. Пожалуйста, введите данные снова...";
+							cin.clear(); cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+						}
+
+					} while (!inputCorrect);
+				
+					//Заменить необходимые фишки
+					auto foundCell = find_if(mainField.cells.begin(), mainField.cells.end(), [putX, putY](Cell& cell) //Фишки, которые мы ищем
+						{
+							return (cell.getX() == putX && cell.getY() == putY);
+						});
+
+					(*foundCell).ChangeStatus(Changing);
+					sleep_for(0.1s);
+					system("cls");
+					cout << "       ХОДИТ ИГРОК       \n";
+					mainField.fillContainer();
+
+					(*foundCell).ChangeStatus(playerColor);
+					sleep_for(0.1s);
+
+					system("cls");
+					mainField.clearPossibles();
+					cout << "       ХОДИТ ИГРОК       \n";
+					mainField.fillContainer();
+					
+					sleep_for(0.1s); 
+
+					//Замена промежуточных клеток
+					{
+						vector <Cell> cellsToFill;
+
+						int cX = putX; int cY = putY; //Координаты проверяемой клетки
+
+						//Модификаторы для проверки по всем направлениям (будут проверяться клетки вокруг выбранной)
+						for (int modY = -1; modY < 2; modY++)
+						{
+							for (int modX = -1; modX < 2; modX++)
+							{
+								bool xFitsBorders = (cX + modX > 0) && (cX + modX <= 8);	//Изменённые координаты не выйдут за границы массива
+								bool yFitsBorders = (cY + modY > 0) && (cY + modY <= 8);
+								bool notCentralCell = !(modX == 0 && modY == 0);			//Не является центральной клеткой (её проверять не надо)
+
+								if (xFitsBorders && yFitsBorders && notCentralCell && mainField.getCellByXY(cX + modX, cY + modY).getStatus() == enemyColor)
+									//Если рядом с пустой клеткой есть фишка противника
+								{
+									//Идти в том направлении пока не будет найдена своя фишка или фишки противника не закончатся
+									bool multiplyGO = true; int mult = 1;
+									do
+									{
+										int multX = cX + modX * mult; int multY = cY + modY * mult;
+										bool xmFitsBorders = (multX > 0) && (multX <= 8);	//Изменённые С УМНОЖЕНИЕМ координаты не выйдут за границы массива
+										bool ymFitsBorders = (multY > 0) && (multY <= 8);
+
+										//Если условие выполнится, программа начнёт проверку другого направления  от клетки
+										if (xmFitsBorders && ymFitsBorders)
+										{
+											//Найдена ячейка на которую можно поставить фишку
+											if (mainField.getCellByXY(multX, multY).getStatus() == playerColor)
+											{
+												mainField.fillColorForArray(cellsToFill, playerColor);
+												cellsToFill.clear();
+												break;
+											}
+										}
+										else { cellsToFill.clear();  break; }
+										mult++;
+										cellsToFill.push_back(mainField.getCellByXY(multX, multY));
+									} while (multiplyGO);
+
+
+								}
+							}
+						}
+					}
+				}
+
 			}
-			case(2): //Бот чёрный - первый ход за игроком
+			break;
+		}
+		case(2): //Бот чёрный - первый ход за игроком
+		{
+			CellStatus playerColor = White, enemyColor = Black;
+			while (mainField.Exists())
 			{
-				//Ходит игрок
-				PlayerShoots(White, Black, field);
-				//Ходит бот
+				while (mainField.Exists())
+				{
+					//Ходит игрок
+					{
+						//Сделать проверку доступных вариантов хода
+						vector <Cell> possCells = mainField.checkMoves(playerColor, enemyColor);
 
-				break;
+						//Обновить форму
+						system("cls");
+						SetAttrib(191);
+						cout << "       ХОДИТ ИГРОК       \n";
+						SetAttrib(15);
+						mainField.fillContainer();
+
+						cout << "Введите координаты ячейки, на которую хотите поставить фишку в формате XY (где X и Y — целые числа от 1 до 8)";
+
+						//Принять координату и проверить на корректность
+						int inCoords; bool inputCorrect = false;
+						int putX, putY;
+						do
+						{
+
+							cout << "\nВаш ввод: ";
+							cin >> inCoords;			cin.clear();
+							if (!cin.fail() && inCoords > 10 && inCoords <= 88 && ((inCoords % 10 <= 8 && inCoords % 10 > 0) && (inCoords / 10 > 0 && inCoords / 10 <= 8)))
+							{
+								//Получили координаты. Проверим, есть ли они среди возможных ходов
+								putX = inCoords / 10;
+								putY = inCoords % 10;
+
+								auto foundCell = find_if(possCells.begin(), possCells.end(), [putX, putY](Cell cell)
+									{
+										return (cell.getX() == putX && cell.getY() == putY);
+									});
+
+								if (foundCell != possCells.end())
+								{
+									inputCorrect = true;
+									cout << "\nПринято. Вы ставите фишку на ячейку с координатами X=" << putX << ", Y=" << putY;
+								}
+								else
+								{
+									cout << "\nВведённой координаты нет среди доступных ходов. Пожалуйста, повторите ввод...";
+								}
+							}
+							else {
+								cout << "\nВаш ввод был некорректен. Пожалуйста, введите данные снова...";
+								cin.clear(); cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+							}
+
+						} while (!inputCorrect);
+
+						//Заменить необходимые фишки
+						auto foundCell = find_if(mainField.cells.begin(), mainField.cells.end(), [putX, putY](Cell& cell) //Фишки, которые мы ищем
+							{
+								return (cell.getX() == putX && cell.getY() == putY);
+							});
+
+						(*foundCell).ChangeStatus(Changing);
+						sleep_for(0.1s);
+						system("cls");
+						cout << "       ХОДИТ ИГРОК       \n";
+						mainField.fillContainer();
+
+						(*foundCell).ChangeStatus(playerColor);
+						sleep_for(0.1s);
+
+						system("cls");
+						mainField.clearPossibles();
+						cout << "       ХОДИТ ИГРОК       \n";
+						mainField.fillContainer();
+
+						sleep_for(0.1s);
+
+						//Замена промежуточных клеток
+						{
+							vector <Cell> cellsToFill;
+
+							int cX = putX; int cY = putY; //Координаты проверяемой клетки
+
+							//Модификаторы для проверки по всем направлениям (будут проверяться клетки вокруг выбранной)
+							for (int modY = -1; modY < 2; modY++)
+							{
+								for (int modX = -1; modX < 2; modX++)
+								{
+									bool xFitsBorders = (cX + modX > 0) && (cX + modX <= 8);	//Изменённые координаты не выйдут за границы массива
+									bool yFitsBorders = (cY + modY > 0) && (cY + modY <= 8);
+									bool notCentralCell = !(modX == 0 && modY == 0);			//Не является центральной клеткой (её проверять не надо)
+
+									if (xFitsBorders && yFitsBorders && notCentralCell && mainField.getCellByXY(cX + modX, cY + modY).getStatus() == enemyColor)
+										//Если рядом с пустой клеткой есть фишка противника
+									{
+										//Идти в том направлении пока не будет найдена своя фишка или фишки противника не закончатся
+										bool multiplyGO = true; int mult = 1;
+										do
+										{
+											int multX = cX + modX * mult; int multY = cY + modY * mult;
+											bool xmFitsBorders = (multX > 0) && (multX <= 8);	//Изменённые С УМНОЖЕНИЕМ координаты не выйдут за границы массива
+											bool ymFitsBorders = (multY > 0) && (multY <= 8);
+
+											//Если условие выполнится, программа начнёт проверку другого направления  от клетки
+											if (xmFitsBorders && ymFitsBorders)
+											{
+												//Найдена ячейка на которую можно поставить фишку
+												if (mainField.getCellByXY(multX, multY).getStatus() == playerColor)
+												{
+													mainField.fillColorForArray(cellsToFill, playerColor);
+													cellsToFill.clear();
+													break;
+												}
+											}
+											else { cellsToFill.clear();  break; }
+											mult++;
+											cellsToFill.push_back(mainField.getCellByXY(multX, multY));
+										} while (multiplyGO);
+
+
+									}
+								}
+							}
+						}
+					}
+					//Ходит бот
+					{
+						system("cls"); 
+						SetAttrib(191);
+						cout << "     ХОДИТ КОМПЬЮТЕР     \n";
+						SetAttrib(15);
+						mainField.fillContainer();
+
+						sleep_for(0.1s);
+
+						vector <Cell> possCells = mainField.checkMoves(enemyColor, playerColor);
+						Cell moveCell = bot.getBotMove(possCells);
+
+						int putX = moveCell.getX(), putY = moveCell.getY();
+
+						auto botFoundCell = find_if(mainField.cells.begin(), mainField.cells.end(), [putX, putY](Cell& cell) //Фишки, которые мы ищем
+							{
+								return (cell.getX() == putX && cell.getY() == putY);
+							});
+
+						mainField.clearPossibles();
+						(*botFoundCell).ChangeStatus(Changing);
+						system("cls");
+						cout << "     ХОДИТ КОМПЬЮТЕР     \n";
+						mainField.fillContainer();
+						sleep_for(0.1s);
+						(*botFoundCell).ChangeStatus(enemyColor);
+						system("cls");
+						cout << "     ХОДИТ КОМПЬЮТЕР     \n";
+						mainField.fillContainer();
+						sleep_for(0.1s);
+
+						//Замена промежуточных клеток
+						{
+							vector <Cell> cellsToFill;
+
+							int cX = putX; int cY = putY; //Координаты проверяемой клетки
+
+							//Модификаторы для проверки по всем направлениям (будут проверяться клетки вокруг выбранной)
+							for (int modY = -1; modY < 2; modY++)
+							{
+								for (int modX = -1; modX < 2; modX++)
+								{
+									bool xFitsBorders = (cX + modX > 0) && (cX + modX <= 8);	//Изменённые координаты не выйдут за границы массива
+									bool yFitsBorders = (cY + modY > 0) && (cY + modY <= 8);
+									bool notCentralCell = !(modX == 0 && modY == 0);			//Не является центральной клеткой (её проверять не надо)
+
+									if (xFitsBorders && yFitsBorders && notCentralCell && mainField.getCellByXY(cX + modX, cY + modY).getStatus() == playerColor)
+										//Если рядом с пустой клеткой есть фишка противника
+									{
+										//Идти в том направлении пока не будет найдена своя фишка или фишки противника не закончатся
+										bool multiplyGO = true; int mult = 1;
+										do
+										{
+											int multX = cX + modX * mult; int multY = cY + modY * mult;
+											bool xmFitsBorders = (multX > 0) && (multX <= 8);	//Изменённые С УМНОЖЕНИЕМ координаты не выйдут за границы массива
+											bool ymFitsBorders = (multY > 0) && (multY <= 8);
+
+											//Если условие выполнится, программа начнёт проверку другого направления  от клетки
+											if (xmFitsBorders && ymFitsBorders)
+											{
+												//Найдена ячейка на которую можно поставить фишку
+												if (mainField.getCellByXY(multX, multY).getStatus() == enemyColor)
+												{
+													mainField.fillColorForArray(cellsToFill, enemyColor);
+													cellsToFill.clear();
+													break;
+												}
+											}
+											else { cellsToFill.clear();  break; }
+											mult++;
+											cellsToFill.push_back(mainField.getCellByXY(multX, multY));
+										} while (multiplyGO);
+
+
+									}
+								}
+							}
+						}
+
+					}
+
+				}
 			}
+			break;
 		}
 	}
+	
 	
 }

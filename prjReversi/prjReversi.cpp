@@ -7,27 +7,26 @@ int main()
     SetConsoleCP(1251);
     SetConsoleOutputCP(1251);
 
-    Field field;
-    int n;
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 15);
-    cout << "1 - Лёгкий\n2 - Сложный\n";
-    cin >> n;
-    n = abs(n) % 2 + 1;
-
-    switch (n)
+    int difficultyChoice;
+    SetAttrib(15);
+    cout << "Выберите сложность игры:\n  1 - Лёгкий\n  2 - Сложный\nВаш выбор: ";
+    cin >> difficultyChoice;
+    difficultyChoice = abs(difficultyChoice) % 2 + 1;
+    cin.clear();
+    switch (difficultyChoice)
     {
         case(1):
         {
             Bot* bot2 = new HardBot();
-            Field field = Field(*bot2);
-            GameStart(*bot2, field);
+            Field startingField = Field(*bot2);
+            Game(*bot2, startingField);
             break;
         }
         default:
         {
             Bot* bot1 = new EasyBot();
-            Field field = Field(*bot1);
-            GameStart(*bot1, field);
+            Field startingField = Field(*bot1);
+            Game(*bot1, startingField);
             break;
         }
     }

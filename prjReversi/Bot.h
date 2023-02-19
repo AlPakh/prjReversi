@@ -13,7 +13,43 @@
 using namespace std;
 using namespace std::this_thread;
 
-static enum CellStatus { Empty = 0, White, Black, Possible };
+/*static*/ enum CellStatus { Empty = 0, White, Black, Possible, Changing};
+
+class Cell {
+private:
+	int X;
+	int Y;
+	CellStatus Status;
+public:
+	Cell() : X(0), Y(0), Status(CellStatus::Empty) {};
+	Cell(int newX, int newY, CellStatus newCS) : Cell()
+	{
+		X = newX;
+		Y = newY;
+		Status = newCS;
+	};
+	~Cell() {};
+
+
+	int getX() {
+		return X;
+	}
+	int getY() {
+		return Y;
+	}
+	CellStatus getStatus() {
+		return Status;
+	}
+	void ChangeStatus(CellStatus newCS)
+	{
+		Status = newCS;
+	};
+
+	Cell& operator= (Cell& otherCell) {
+		Status = otherCell.getStatus();
+		return *this;
+	}
+};
 
 inline int getRandom()
 {
@@ -51,7 +87,7 @@ public:
 		}
 
 	};
-	~Bot() {};
+	~Bot(){};
 
 	virtual std::string getColor() const { 
 		switch (botColor) 
@@ -74,17 +110,39 @@ public:
 	virtual int getStatus() const {
 		return botColor;
 	}
+
+	virtual Cell getBotMove(vector <Cell> possibleBotMoves) const 
+	{ 
+		return possibleBotMoves.front(); 
+	};
+
 };
 
 
-class EasyBot :public Bot
+class EasyBot : public Bot
 {
 public:
 	EasyBot() :Bot() {}
+
+	virtual Cell getBotMove(vector <Cell> possibleBotMoves) const //Получает случайную позицию из получаемого вектора ячеек и возвращает как возможный ход
+	{
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_int_distribution<> dist(0, possibleBotMoves.size()-1);
+		int randomPosition = dist(gen);
+
+		return (possibleBotMoves.at(randomPosition));
+	}
 };
 
-class HardBot :public Bot
+class HardBot : public Bot
 {
 public:
 	HardBot() :Bot() {}
+
+	//Cell getBotMove(vector <Cell> possibleBotMoves) const
+	//{
+	//	// for_each;
+	//	;
+	//}
 };
