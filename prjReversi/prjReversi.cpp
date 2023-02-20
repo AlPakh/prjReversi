@@ -13,22 +13,22 @@ int main()
     cin >> difficultyChoice;
     difficultyChoice = abs(difficultyChoice) % 2 + 1;
     cin.clear();
+    Field startingField;
     switch (difficultyChoice)
     {
         case(1):
         {
             Bot* bot2 = new HardBot();
-            Field startingField = Field(*bot2);
+            startingField = Field(*bot2);
             Game(*bot2, startingField);
             break;
         }
         default:
         {
             Bot* bot1 = new EasyBot();
-            Field startingField = Field(*bot1);
+            startingField = Field(*bot1);
             Game(*bot1, startingField);
             break;
         }
     }
-
 }

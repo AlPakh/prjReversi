@@ -70,7 +70,15 @@ public:
 	}
 	~Field() {};
 
-	bool Exists() { return GameExists; }
+	bool gameExists() { 
+		return GameExists; 
+	}
+
+	void GameStoppedExisting() 
+	{ 
+		GameExists = false; 
+	}
+
 	vector <Cell> &getFieldCells() { return cells; }
 
 	void clearPossibles() 
@@ -86,10 +94,11 @@ public:
 
 	void fillContainer()  //Вывод в консоль поля 
 	{
-		cout << "     1 2 3 4 5 6 7 8\n\n";
+		SetAttrib(112);
+		cout << "     1 2 3 4 5 6 7 8     \n";
 		for (int i = 1; i < 9; i++)
 		{
-			cout << " " << i << "   ";
+			cout << "   " << i << " ";
 			for (int j = 1; j < 9; j++)
 			{
 				auto foundCell = find_if(cells.begin(), cells.end(), [j, i](Cell cell)
@@ -98,11 +107,14 @@ public:
 					});
 				colorSymbol((*foundCell).getStatus());
 			}
-			SetAttrib(15);
-			cout << endl;
+			SetAttrib(112);
+			cout << "    " << endl;
 		}
-		SetAttrib(191);
+		SetAttrib(112);
+		cout << "                         " << endl;
+		SetAttrib(15);
 		cout << endl;
+		SetAttrib(191);
 		cout << string(88, ' ') << "\n";
 		SetAttrib(191);
 		cout << "  "; SetAttrib(32);	cout << "  ";  SetAttrib(191); cout << " —  Клетки поля, ";
@@ -216,13 +228,6 @@ public:
 
 		return possibleCells;//fillColorForArray(possibleCells, Possible);
 	}
-
-	bool Contains(int X, int Y) 
-	{
-		// Проверка, есть ли в векторе ячейка с такими координатами 
-	}
 };
 
 void Game(const Bot &bot, Field field);
-
-inline void colorSymbol(CellStatus cs);
